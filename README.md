@@ -1,4 +1,4 @@
-# Money counter (money-counter)
+# Simple keeper
 
 Простое приложение для подсчета ежемесячных расходов.
 Оно умеет: 
