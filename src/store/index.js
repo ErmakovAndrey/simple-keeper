@@ -1,14 +1,11 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 import UUID from 'vue-uuid'
-import createPersistedState from "vuex-persistedstate";
-
-
-// import example from './module-example'
+import createPersistedState from 'vuex-persistedstate'
+import {getIdx} from '../store/utils'
 
 Vue.use(Vuex)
 Vue.use(UUID)
-
 
 /*
  * If not building with SSR mode, you can
@@ -35,17 +32,17 @@ export default new Vuex.Store({
         year: payload.nowDate.getFullYear()
       })
       if (payload.prevPayTypes)
-        Vue.set(state.payList, `${payload.nowDate.getFullYear()}-${payload.nowDate.getMonth()}`, payload.prevPayTypes)
+        Vue.set(
+          state.payList,
+          `${payload.nowDate.getFullYear()}-${payload.nowDate.getMonth()}`,
+          payload.prevPayTypes
+        )
     },
     addNewPay(state, payload) {
-      state.payList[payload.date].forEach(aPayType => {
-        if (aPayType.id === payload.id) aPayType.value += +payload.value
-      })
+      state.payList[payload.date][payload.idx].value += +payload.value
     },
     changeLimit(state, payload) {
-      state.payList[payload.date].forEach(aPayType => {
-        if (aPayType.id === payload.id) aPayType.maxValue = +payload.value
-      })
+      state.payList[payload.date][payload.idx].maxValue = +payload.value
     },
     removePayType(state, payload) {
       state.payList[payload.date].splice(payload.idx, 1)
@@ -58,7 +55,7 @@ export default new Vuex.Store({
         name: payload.name,
         maxValue: payload.amountMax,
         value: 0,
-        id: Vue.prototype.$uuid.v4(),
+        id: Vue.prototype.$uuid.v4()
       })
     }
   },
@@ -67,47 +64,58 @@ export default new Vuex.Store({
     setDate({ commit, state }) {
       const nowDate = new Date()
       let prevPayTypes = null
-      if (state.payList && 
-        state.payList[`${nowDate.getFullYear()}-${nowDate.getMonth() - 1}`] && 
-        state.payList[`${nowDate.getFullYear()}-${nowDate.getMonth() - 1}`].length > 0) {
-      prevPayTypes = state.payList[`${nowDate.getFullYear()}-${nowDate.getMonth() - 1}`].map((item) => Object.assign({}, item))
-      prevPayTypes.forEach( item => {
-        item.value = 0
-        item.id = Vue.prototype.$uuid.v4()
-      })}
-      commit('setDate', {nowDate, prevPayTypes})
+      if (
+        state.payList &&
+        state.payList[`${nowDate.getFullYear()}-${nowDate.getMonth() - 1}`] &&
+        state.payList[`${nowDate.getFullYear()}-${nowDate.getMonth() - 1}`].length > 0
+      ) {
+        prevPayTypes = state.payList[
+          `${nowDate.getFullYear()}-${nowDate.getMonth() - 1}`
+        ].map(item => Object.assign({}, item))
+        prevPayTypes.forEach(item => {
+          item.value = 0
+          item.id = Vue.prototype.$uuid.v4()
+        })
+      }
+      commit('setDate', { nowDate, prevPayTypes })
     },
-    addNewPay({ commit }, payload) {
-      commit('addNewPay', payload)
+    addNewPay({ commit, state }, payload) {
+      const idx = getIdx(state, payload)
+      commit('addNewPay', { ...payload, idx })
     },
-    changeLimit({commit}, payload) {
-      commit('changeLimit', payload)
+    changeLimit({ commit, state }, payload) {
+      const idx = getIdx(state, payload)
+      commit('changeLimit', { ...payload, idx })
     },
     removePayType({ commit, state }, payload) {
-      const idx = state.payList[payload.date].findIndex(
-        aPayType => aPayType.id === payload.id
-      )
-      commit('removePayType', {...payload, idx})
+      const idx = getIdx(state, payload)
+      commit('removePayType', { ...payload, idx })
     },
     addPayType({ commit, state }, payload) {
       const nowDate = new Date()
       const currentDate = `${nowDate.getFullYear()}-${nowDate.getMonth()}`
       commit('addPayType', { ...payload, currentDate })
-    },
+    }
   },
   // Getters
   getters: {
     getCurrentDate: state => {
-        const nowDate = new Date()
-        const findedDate =  state.dates.find(aDate => aDate.year == nowDate.getFullYear() && aDate.month == nowDate.getMonth())
+      const nowDate = new Date()
+      const findedDate = state.dates.find(
+        aDate =>
+          aDate.year == nowDate.getFullYear() &&
+          aDate.month == nowDate.getMonth()
+      )
       if (findedDate) return findedDate
-      else return {year: 0, month: 0}
+      else return { year: 0, month: 0 }
     },
     getCurrentPayTypes: state => key => state.payList[key],
     geDates: state => state.dates,
-    getCurrentLimit: (state) => keys => { 
-      if(keys.date && keys.id) {
-        const currentType = state.payList[keys.date].find( item => item.id === keys.id)
+    getCurrentLimit: state => keys => {
+      if (keys.date && keys.id) {
+        const currentType = state.payList[keys.date].find(
+          item => item.id === keys.id
+        )
         return +currentType.maxValue
       } else {
         return 0
