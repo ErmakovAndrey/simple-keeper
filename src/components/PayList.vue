@@ -21,7 +21,7 @@
         <q-item-label class="text-h6 text-primary">
           {{ currentPayType.name }}
         </q-item-label>
-        <q-item-label lines="1" class="text-secondary">
+        <q-item-label lines="1" class="text-secondary" v-if="!currentPayType.limitDisabled">
           <span class="text-weight-light" style="font-size: 0.75rem"
             >Лимит:</span
           >
@@ -35,8 +35,13 @@
         v-show="
           !(editItem.id === currentPayType.id && editItem.onEdit === true)
         "
-      >
-        <q-circular-progress
+      > 
+        <div class="total-amount" v-if="currentPayType.limitDisabled">
+          <strong>
+            {{ currentPayType.value }} руб.
+          </strong>
+        </div>
+        <q-circular-progress v-if="!currentPayType.limitDisabled"
           reverse
           show-value
           :value="

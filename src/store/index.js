@@ -2,7 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import UUID from 'vue-uuid'
 import createPersistedState from 'vuex-persistedstate'
-import {getIdx} from '../store/utils'
+import {getIdx, getTransitionIdx} from '../store/utils'
 
 Vue.use(Vuex)
 Vue.use(UUID)
@@ -22,7 +22,8 @@ export default new Vuex.Store({
   // State
   state: {
     dates: [],
-    payList: {}
+    payList: {},
+    version: ''
   },
   // Mutations
   mutations: {
@@ -40,9 +41,17 @@ export default new Vuex.Store({
     },
     addNewPay(state, payload) {
       state.payList[payload.date][payload.idx].value += +payload.value
+      state.payList[payload.date][payload.idx].transactions.push(
+        {
+          amount: +payload.value,
+          date: new Date(),
+          id: Vue.prototype.$uuid.v4()
+        }
+      )
     },
     changeLimit(state, payload) {
       state.payList[payload.date][payload.idx].maxValue = +payload.value
+      state.payList[payload.date][payload.idx].limitDisabled = !!payload.limitDisabled
     },
     removePayType(state, payload) {
       state.payList[payload.date].splice(payload.idx, 1)
@@ -54,9 +63,24 @@ export default new Vuex.Store({
       state.payList[payload.currentDate].push({
         name: payload.name,
         maxValue: payload.amountMax,
+        limitDisabled: payload.limitDisabled,
         value: 0,
-        id: Vue.prototype.$uuid.v4()
+        id: Vue.prototype.$uuid.v4(),
+        transactions: [],
       })
+    },
+    deleteTransaction(state, payload) {
+      state.payList[payload.date][payload.payTypeIdx].transactions.splice(payload.transactionIdx, 1)
+    },
+    updateVersion(state) {
+      Object.keys(state.payList).forEach((aMonth) => {
+        state.payList[aMonth].forEach((aPayType) => {
+          aPayType.transactions.forEach((aTransactions) => {
+            aTransactions.id = Vue.prototype.$uuid.v4()
+          })
+        })
+      })
+      state.version = 0.7
     }
   },
   // Actions
@@ -95,6 +119,14 @@ export default new Vuex.Store({
       const nowDate = new Date()
       const currentDate = `${nowDate.getFullYear()}-${nowDate.getMonth()}`
       commit('addPayType', { ...payload, currentDate })
+    },
+    deleteTransaction({ commit, state }, payload) {
+      const payTypeIdx = getIdx(state, payload)
+      const transactionIdx = getTransitionIdx(state, payload)
+      commit('deleteTransaction', { ...payload, payTypeIdx, transactionIdx })
+    },
+    updateVersion({commit}) {
+      commit('updateVersion')
     }
   },
   // Getters
@@ -111,16 +143,14 @@ export default new Vuex.Store({
     },
     getCurrentPayTypes: state => key => state.payList[key],
     geDates: state => state.dates,
-    getCurrentLimit: state => keys => {
+    getPayTypeItem: state => keys => {
       if (keys.date && keys.id) {
         const currentType = state.payList[keys.date].find(
           item => item.id === keys.id
         )
-        return +currentType.maxValue
-      } else {
-        return 0
+        return currentType
       }
-    }
+    },
   },
 
   // enable strict mode (adds overhead!)

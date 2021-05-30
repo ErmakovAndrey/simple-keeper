@@ -6,8 +6,11 @@
         <div class="form-item">
           <q-input outlined label="Наименование" v-model="name" />
         </div>
-        <div class="form-item">
+        <div class="form-item" v-show="!limitDisabled">
           <q-input outlined label="Месячный лимит" v-model="amountMax" />
+        </div>
+        <div class="form-item q-gutter-sm">
+          <q-checkbox left-label v-model="limitDisabled" label="Не использовать лимит"></q-checkbox>
         </div>
         <div class="form-item">
           <q-btn label="Добавить" type="submit" color="primary" />
@@ -26,13 +29,14 @@ export default {
     return {
       name: '',
       amountMax: null,
+      limitDisabled: false,
       errorMessage: ''
     }
   },
   methods: {
     onSubmit() {
-      if (Number.isInteger(+this.amountMax)) {
-        this.$emit('addPayType', { name: this.name, amountMax: this.amountMax })
+      if (this.limitOff || Number.isInteger(+this.amountMax)) {
+        this.$emit('addPayType', { name: this.name, amountMax: this.amountMax, limitDisabled: this.limitDisabled })
         this.close()
       } else {
           this.errorMessage = 'Месячный лимит должен быть числом'
