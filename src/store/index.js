@@ -99,6 +99,7 @@ export default new Vuex.Store({
         prevPayTypes.forEach(item => {
           item.value = 0
           item.id = Vue.prototype.$uuid.v4()
+          item.transactions = []
         })
       }
       commit('setDate', { nowDate, prevPayTypes })
